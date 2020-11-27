@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">FRAPPE</string>
+    <string name="settings_c">SETTINGS</string>
+    <string name="pick_image_intent_text">Choose an image</string>
+    <string name="first_name">First name</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="register">Register</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="age">Age</string>
+    <string name="please_enter_username">Please enter Username</string>
+    <string name="please_enter_password">Please enter password</string>
+    <string name="password_mismatch">Password and confirm password should be identical</string>
+    <string name="enetr_age">Please enter age</string>
+    <string name="select_image">Please select image</string>
+    <string name="storage_permission_denied_feedback">Storage permission is needed to take profile picture</string>
+    <string name="location_permission_denied_dialog_title">Location permission request</string>
+    <string name="storage_permission_denied_dialog_title">Storage permission request</string>
+    <string name="permission_rationale_title">We need this permission</string>
+    <string name="permission_rationale_message">This permission is needed for the proper functioning of the app so please, allow it!</string>
+    <string name="user_registered_successfully">User Registered successfully</string>
+    <string name="request_cannot_be_processed">Request cannot be proceesed. Please try later</string>
+    <string name="select_profile_image">Select Profile Image</string>
+
+</resources>
