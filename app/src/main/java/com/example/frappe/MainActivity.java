@@ -9,7 +9,12 @@ import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
 import com.google.android.gms.vision.face.Landmark;
+
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -129,13 +134,27 @@ public  class MainActivity extends AppCompatActivity  implements View.OnClickLis
 
             image = (Bitmap) data.getExtras().get("data");
 
-            processImage(image);
-            launchMediaScanIntent();
+
+            image =   getResizedBitmap(image,300);
             try {
-                processCameraPicture(image);
-            } catch (Exception e) {
-                Toast.makeText(getApplicationContext(), "Failed to load Image", Toast.LENGTH_SHORT).show();
+                File cacheFile = new File(this.getCacheDir(), "upoload" +  ".jpeg");
+                if(!cacheFile.exists())
+                {
+                    File.createTempFile("upoload" +  ".png", null, this.getCacheDir());
+                }
+
+
+                FileOutputStream fOut = new FileOutputStream(cacheFile);
+
+                image.compress(Bitmap.CompressFormat.PNG, 100, fOut);
+                fOut.flush();
+                fOut.close();
+
+            } catch (IOException e) {
+                e.printStackTrace();
             }
+
+
             Intent i = new Intent(getApplicationContext(), DispImageActivity.class);
             i.putExtra("image", image);
             startActivity(i);
@@ -143,139 +162,21 @@ public  class MainActivity extends AppCompatActivity  implements View.OnClickLis
         }
     }
 
-    private void processCameraPicture(Bitmap bitmap) throws Exception  {
 
-        if ( bitmap != null) {
+    public Bitmap getResizedBitmap(Bitmap image, int maxSize) {
+        int width = image.getWidth();
+        int height = image.getHeight();
 
-            float scale = getResources().getDisplayMetrics().density;
-            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            paint.setColor(Color.GREEN);
-            paint.setTextSize((int) (16 * scale));
-            paint.setShadowLayer(1f, 0f, 1f, Color.WHITE);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(6f);
-            Canvas canvas = new Canvas(bitmap);
-            canvas.drawBitmap(bitmap, 0, 0, paint);
-            Frame frame = new Frame.Builder().setBitmap(bitmap).build();
-            SparseArray<Face> faces = detector.detect(frame);
-            //txtTakenPicDesc.setText(null);
-
-            for (int index = 0; index < faces.size(); ++index) {
-                Face face = faces.valueAt(index);
-                canvas.drawRect(
-                        face.getPosition().x,
-                        face.getPosition().y,
-                        face.getPosition().x + face.getWidth(),
-                        face.getPosition().y + face.getHeight(), paint);
-
-
-                canvas.drawText("Face " + (index + 1), face.getPosition().x + face.getWidth(), face.getPosition().y + face.getHeight(), paint);
-
-//                txtTakenPicDesc.setText("FACE " + (index + 1) + "\n");
-//                txtTakenPicDesc.setText(txtTakenPicDesc.getText() + "Smile probability:" + " " + face.getIsSmilingProbability() + "\n");
-//                txtTakenPicDesc.setText(txtTakenPicDesc.getText() + "Left Eye Is Open Probability: " + " " + face.getIsLeftEyeOpenProbability() + "\n");
-//                txtTakenPicDesc.setText(txtTakenPicDesc.getText() + "Right Eye Is Open Probability: " + " " + face.getIsRightEyeOpenProbability() + "\n\n");
-
-                for (Landmark landmark : face.getLandmarks()) {
-                    int cx = (int) (landmark.getPosition().x);
-                    int cy = (int) (landmark.getPosition().y);
-                    canvas.drawCircle(cx, cy, 8, paint);
-                }
-
-
-            }
-
-            if (faces.size() == 0) {
-//                txtTakenPicDesc.setText("Scan Failed: Found nothing to scan");
-            } else {
-//                imgTakePicture.setImageBitmap(editedBitmap);
-//                txtTakenPicDesc.setText(txtTakenPicDesc.getText() + "No of Faces Detected: " + " " + String.valueOf(faces.size()));
-            }
+        float bitmapRatio = (float)width / (float) height;
+        if (bitmapRatio > 1) {
+            width = maxSize;
+            height = (int) (width / bitmapRatio);
         } else {
-//            txtTakenPicDesc.setText("Could not set up the detector!");
+            height = maxSize;
+            width = (int) (height * bitmapRatio);
         }
+        return Bitmap.createScaledBitmap(image, width, height, true);
     }
-
-    private Bitmap decodeBitmapUri(MainActivity ctx, Uri uri) throws FileNotFoundException {
-        int targetW = 300;
-        int targetH = 300;
-        BitmapFactory.Options bmOptions = new BitmapFactory.Options();
-        bmOptions.inJustDecodeBounds = true;
-        BitmapFactory.decodeStream(ctx.getContentResolver().openInputStream(uri), null, bmOptions);
-        int photoW = bmOptions.outWidth;
-        int photoH = bmOptions.outHeight;
-
-        int scaleFactor = Math.min(photoW / targetW, photoH / targetH);
-        bmOptions.inJustDecodeBounds = false;
-        bmOptions.inSampleSize = scaleFactor;
-
-        return BitmapFactory.decodeStream(ctx.getContentResolver()
-                .openInputStream(uri), null, bmOptions);
-    }
-
-
-
-    private void launchMediaScanIntent() {
-        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-        this.sendBroadcast(mediaScanIntent);
-    }
-    private void processImage(Bitmap editedBitmap) {
-        if (editedBitmap != null) {
-            float scale = getResources().getDisplayMetrics().density;
-            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            paint.setColor(Color.GREEN);
-            paint.setTextSize((int) (16 * scale));
-            paint.setShadowLayer(1f, 0f, 1f, Color.WHITE);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(6f);
-
-            Bitmap workingBitmap = Bitmap.createBitmap(editedBitmap);
-            Bitmap mutableBitmap = workingBitmap.copy(Bitmap.Config.ARGB_8888, true);
-            Canvas canvas = new Canvas(mutableBitmap);
-
-            canvas.drawBitmap(editedBitmap, 0, 0, paint);
-            Frame frame = new Frame.Builder().setBitmap(editedBitmap).build();
-            SparseArray<Face> faces = detector.detect(frame);
-
-
-            for (int index = 0; index < faces.size(); ++index) {
-                Face face = faces.valueAt(index);
-                canvas.drawRect(
-                        face.getPosition().x,
-                        face.getPosition().y,
-                        face.getPosition().x + face.getWidth(),
-                        face.getPosition().y + face.getHeight(), paint);
-
-
-                canvas.drawText("Face " + (index + 1), face.getPosition().x + face.getWidth(), face.getPosition().y + face.getHeight(), paint);
-
-//                txtSampleDesc.setText(txtSampleDesc.getText() + "FACE " + (index + 1) + "\n");
-//                txtSampleDesc.setText(txtSampleDesc.getText() + "Smile probability:" + " " + face.getIsSmilingProbability() + "\n");
-//                txtSampleDesc.setText(txtSampleDesc.getText() + "Left Eye Is Open Probability: " + " " + face.getIsLeftEyeOpenProbability() + "\n");
-//                txtSampleDesc.setText(txtSampleDesc.getText() + "Right Eye Is Open Probability: " + " " + face.getIsRightEyeOpenProbability() + "\n\n");
-
-                for (Landmark landmark : face.getLandmarks()) {
-                    int cx = (int) (landmark.getPosition().x);
-                    int cy = (int) (landmark.getPosition().y);
-                    canvas.drawCircle(cx, cy, 8, paint);
-                }
-
-
-            }
-
-            if (faces.size() == 0) {
-                //txtSampleDesc.setText("Scan Failed: Found nothing to scan");
-            } else {
-//                imageView.setImageBitmap(editedBitmap);
-//                txtSampleDesc.setText(txtSampleDesc.getText() + "No of Faces Detected: " + " " + String.valueOf(faces.size()));
-            }
-        } else {
-//            txtSampleDesc.setText("Could not set up the detector!");
-        }
-
-
-    }
-
     @Override
     public void onClick(View v) {
 
