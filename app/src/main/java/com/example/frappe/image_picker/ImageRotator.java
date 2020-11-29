@@ -9,10 +9,7 @@ import android.net.Uri;
 import android.provider.MediaStore;
 import android.util.Log;
 
-/**
- * Author:ABH
- * Date: 21/07/2016
- */
+
 public final class ImageRotator {
 
     private static final String TAG = ImageRotator.class.getSimpleName();

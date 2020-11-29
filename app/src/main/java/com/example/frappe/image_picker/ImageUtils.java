@@ -7,9 +7,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-/**
- * Created by ABH on 11/12/2016.
- */
+
 
 public final class ImageUtils {
 

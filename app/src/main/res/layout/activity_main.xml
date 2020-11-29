@@ -140,8 +140,14 @@
 
                 </TextView>
             </LinearLayout>
-
+            <ProgressBar
+                android:id="@+id/progress_bar1"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_centerInParent="true"
+                android:visibility="gone"></ProgressBar>
         </LinearLayout>
+
     </ScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

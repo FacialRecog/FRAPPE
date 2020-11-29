@@ -33,5 +33,7 @@ public interface ApiInterface {
     Call<JsonObject> register( @PartMap Map<String, RequestBody> params,
                                    @Part MultipartBody.Part image);
 
-
+    @Multipart
+    @POST("Attendance/")
+    Call<JsonObject> scan( @Part MultipartBody.Part image);
 }

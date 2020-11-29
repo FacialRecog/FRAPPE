@@ -5,10 +5,17 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
+import com.example.frappe.api.ApiClient;
+import com.example.frappe.api.ApiInterface;
+import com.example.frappe.image_picker.ImagePicker;
+import com.example.frappe.model.UserModel;
 import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
 import com.google.android.gms.vision.face.Landmark;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -16,6 +23,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -30,16 +38,25 @@ import android.util.SparseArray;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
-public  class MainActivity extends AppCompatActivity  implements View.OnClickListener{
+
+public  class MainActivity extends AppCompatActivity{
     EditText etUsername,etPassword;
     Button login;
     TextView tv_signUp;
     public static final int CAMERA_PERM_CODE = 101;
     public static final int CAMERA_REQUEST_CODE = 102;
+    public static final int NEXT_INTENT=103;
     private static final String SAVED_INSTANCE_URI = "uri";
     private static final String SAVED_INSTANCE_BITMAP = "bitmap";
     Bitmap image;
@@ -47,27 +64,32 @@ public  class MainActivity extends AppCompatActivity  implements View.OnClickLis
     private View mProgressView;
     private View mLoginFormView;
     private Uri imageUri;
-
-
+    private File fileTemp ;
+    private ApiInterface apiService;
+    ProgressBar progress_bar;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        detector = new FaceDetector.Builder(getApplicationContext())
-                .setTrackingEnabled(true)
-                .setLandmarkType(FaceDetector.ALL_CLASSIFICATIONS)
-                .setClassificationType(FaceDetector.ALL_CLASSIFICATIONS)
-                .build();
+        ImagePicker.setMinQuality(600, 600);
+        apiService = ApiClient.getClient().create(ApiInterface.class);
 
         etUsername=findViewById(R.id.editTextTextPersonName);
         etPassword=findViewById(R.id.editTextTextPassword);
         login=findViewById(R.id.button);
-
+        progress_bar = findViewById(R.id.progress_bar1);
         mLoginFormView = findViewById(R.id.login_form);
         mProgressView = findViewById(R.id.login_progress);
         tv_signUp = findViewById(R.id.tv_signUp);
 
+        Intent intent = getIntent();
+        int intValue = intent.getIntExtra("result", 0);
+        if(intValue==1){
+            openCamera();
+        }
+
+        apiService = ApiClient.getClient().create(ApiInterface.class);
         login.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -118,14 +140,7 @@ public  class MainActivity extends AppCompatActivity  implements View.OnClickLis
 
         startActivityForResult(intent1,CAMERA_REQUEST_CODE);
     }
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        if (imageUri != null) {
-            outState.putParcelable(SAVED_INSTANCE_BITMAP, imageUri);
-            outState.putString(SAVED_INSTANCE_URI, imageUri.toString());
-        }
-        super.onSaveInstanceState(outState);
-    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
 
@@ -134,13 +149,16 @@ public  class MainActivity extends AppCompatActivity  implements View.OnClickLis
 
             image = (Bitmap) data.getExtras().get("data");
 
-
             image =   getResizedBitmap(image,300);
+
+            Intent i = new Intent(getApplicationContext(), DispImageActivity.class);
+            i.putExtra("image", image);
+
             try {
-                File cacheFile = new File(this.getCacheDir(), "upoload" +  ".jpeg");
+                File cacheFile = new File(getApplicationContext().getCacheDir(), "upoload" +  ".jpeg");
                 if(!cacheFile.exists())
                 {
-                    File.createTempFile("upoload" +  ".png", null, this.getCacheDir());
+                    File.createTempFile("upoload" +  ".png", null, getApplicationContext().getCacheDir());
                 }
 
 
@@ -149,19 +167,80 @@ public  class MainActivity extends AppCompatActivity  implements View.OnClickLis
                 image.compress(Bitmap.CompressFormat.PNG, 100, fOut);
                 fOut.flush();
                 fOut.close();
-
+                fileTemp = cacheFile;
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
+            progress_bar.setVisibility(View.VISIBLE);
+            attendance();
 
-            Intent i = new Intent(getApplicationContext(), DispImageActivity.class);
-            i.putExtra("image", image);
             startActivity(i);
 
         }
+
     }
 
+    private void attendance() {
+        MultipartBody.Part profileImage = null;
+        if (fileTemp!=null) {
+
+            RequestBody requestBody = RequestBody.create(MediaType.parse("*/*"), fileTemp);
+            profileImage = MultipartBody.Part.createFormData("image", fileTemp.getName(), requestBody);
+        }
+
+        Call<JsonObject> call = apiService.scan( profileImage);
+        call.enqueue(new Callback<JsonObject>() {
+            @Override
+            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
+                progress_bar.setVisibility(View.GONE);
+
+                if (response.isSuccessful()) {
+
+                    JsonObject jsonObject = response.body();
+                    if (jsonObject.has("id")) {
+
+                        try {
+
+                            Gson gson= new Gson();
+                            UserModel user = gson.fromJson(jsonObject.toString(),UserModel.class);
+                            if(user!=null)
+                            {
+                                Toast.makeText(getApplicationContext(), "user_attendance_marked_successfully",Toast.LENGTH_SHORT).show();
+                                onBackPressed();
+                            }
+                            else
+                                Toast.makeText(getApplicationContext(), R.string.request_cannot_be_processed,Toast.LENGTH_SHORT).show();
+
+                        }catch (Exception e){
+                            Toast.makeText(getApplicationContext(), R.string.request_cannot_be_processed,Toast.LENGTH_SHORT).show();
+
+                        }
+
+                    } else {
+                        Toast.makeText(getApplicationContext(), R.string.request_cannot_be_processed,Toast.LENGTH_SHORT).show();
+
+
+                    }
+
+                } else {
+
+                    Toast.makeText(getApplicationContext(), R.string.request_cannot_be_processed,Toast.LENGTH_SHORT).show();
+
+                }
+
+
+
+            }
+
+            @Override
+            public void onFailure(Call<JsonObject> call, Throwable t) {
+                progress_bar.setVisibility(View.GONE);
+                Toast.makeText(getApplicationContext(), R.string.request_cannot_be_processed,Toast.LENGTH_SHORT).show();
+
+            }
+        });
+    }
 
     public Bitmap getResizedBitmap(Bitmap image, int maxSize) {
         int width = image.getWidth();
@@ -176,9 +255,5 @@ public  class MainActivity extends AppCompatActivity  implements View.OnClickLis
             width = (int) (height * bitmapRatio);
         }
         return Bitmap.createScaledBitmap(image, width, height, true);
-    }
-    @Override
-    public void onClick(View v) {
-
     }
 }
