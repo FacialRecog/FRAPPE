@@ -145,7 +145,7 @@ public  class MainActivity extends AppCompatActivity{
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
 
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == CAMERA_REQUEST_CODE) {
+        if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
 
             image = (Bitmap) data.getExtras().get("data");
 
@@ -186,7 +186,7 @@ public  class MainActivity extends AppCompatActivity{
         if (fileTemp!=null) {
 
             RequestBody requestBody = RequestBody.create(MediaType.parse("*/*"), fileTemp);
-            profileImage = MultipartBody.Part.createFormData("image", fileTemp.getName(), requestBody);
+            profileImage = MultipartBody.Part.createFormData("image1", fileTemp.getName(), requestBody);
         }
 
         Call<JsonObject> call = apiService.scan( profileImage);
