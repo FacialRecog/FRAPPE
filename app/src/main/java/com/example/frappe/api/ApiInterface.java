@@ -1,7 +1,9 @@
 package com.example.frappe.api;
 
+import com.example.frappe.model.UserModel;
 import com.google.gson.JsonObject;
 
+import java.util.List;
 import java.util.Map;
 
 import okhttp3.MultipartBody;
@@ -36,4 +38,10 @@ public interface ApiInterface {
     @Multipart
     @POST("Attendance/")
     Call<JsonObject> scan( @Part MultipartBody.Part image);
+
+    @GET("register/{username}")
+    Call<JsonObject> getUser(@Path("username") String username);
+
+    @GET("register/")
+    Call<List<UserModel>> getPosts();
 }
