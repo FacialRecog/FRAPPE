@@ -25,6 +25,7 @@ import java.io.IOException;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -48,6 +49,8 @@ import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 
 public  class MainActivity extends AppCompatActivity{
@@ -151,8 +154,8 @@ public  class MainActivity extends AppCompatActivity{
 
             image =   getResizedBitmap(image,300);
 
-            Intent i = new Intent(getApplicationContext(), DispImageActivity.class);
-            i.putExtra("image", image);
+//            Intent i = new Intent(getApplicationContext(), DispImageActivity.class);
+//            i.putExtra("image", image);
 
             try {
                 File cacheFile = new File(getApplicationContext().getCacheDir(), "upoload" +  ".jpeg");
@@ -173,12 +176,59 @@ public  class MainActivity extends AppCompatActivity{
             }
 
             progress_bar.setVisibility(View.VISIBLE);
-            attendance();
 
-            startActivity(i);
+            attnd(image);
+           // startActivity(i);
 
         }
 
+    }
+
+    private void attnd(Bitmap image) {
+        MultipartBody.Part profileImage = null;
+        if (fileTemp!=null) {
+
+            RequestBody requestBody = RequestBody.create(MediaType.parse("*/*"), fileTemp);
+            profileImage = MultipartBody.Part.createFormData("image1", fileTemp.getName(), requestBody);
+        }
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("https://support.etatechnology.in/people/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        ApiInterface retrofitInterface = retrofit.create(ApiInterface.class);
+
+        RequestBody requestFile = RequestBody.create(MediaType.parse("*/*"), fileTemp);
+
+        MultipartBody.Part body = MultipartBody.Part.createFormData("image", "image.jpg", requestFile);
+        Call<JsonObject> call = retrofitInterface.uploadImage(body);
+        call.enqueue(new Callback<JsonObject>() {
+            @Override
+            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
+                SharedPreferences prefs = getSharedPreferences("attendance", MODE_PRIVATE);
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putString("id", response.body().get("id").toString());
+                editor.putString("Employee Name", response.body().get("Employee Name").toString());
+                editor.putString("Login status", response.body().get("Login status").toString());
+                editor.putString("Time", response.body().get("Time").toString());
+                editor.putString("deleted_at", response.body().get("deleted_at").toString());
+                editor.putString("image", response.body().get("image").toString());
+                editor.putString("created_at", response.body().get("created_at").toString());
+                editor.putString("updated_at", response.body().get("updated_at").toString());
+                editor.commit();
+
+                Intent i = new Intent(getApplicationContext(), DispImageActivity.class);
+                i.putExtra("image", image);
+                startActivity(i);
+            }
+
+
+            @Override
+            public void onFailure(Call<JsonObject> call, Throwable t) {
+
+            }
+        });
     }
 
     private void attendance() {

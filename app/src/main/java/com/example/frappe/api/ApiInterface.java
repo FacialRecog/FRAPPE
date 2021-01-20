@@ -44,4 +44,8 @@ public interface ApiInterface {
 
     @GET("register/")
     Call<List<UserModel>> getPosts();
+
+    @Multipart
+    @POST("upload/")
+    Call<JsonObject> uploadImage(@Part MultipartBody.Part image);
 }
